@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 # Connect the local database
 # database_name = "hktm"
 # database_path = "postgresql://{}/{}".format('alfred.kctang@localhost:5432', database_name)
-database_path = os.environ['DATABASE_URL']
+database_path = "postgresql" + os.environ['DATABASE_URL'][8:]
 
 db = SQLAlchemy()
 
