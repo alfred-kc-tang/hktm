@@ -1,13 +1,14 @@
-import json
 from functools import wraps
+import json
+import os
 from urllib.request import urlopen
 
 from flask import request, _request_ctx_stack
 from jose import jwt
 
-AUTH0_DOMAIN = 'coffee-shop-udacity-fsnd.us.auth0.com'
-ALGORITHMS = ['RS256']
-API_AUDIENCE = 'hk-trademark'
+AUTH0_DOMAIN = os.environ.get('AUTH0_DOMAIN')
+ALGORITHMS = [os.environ.get('ALGORITHM')]
+API_AUDIENCE = os.environ.get('API_AUDIENCE')
 
 ## AuthError Exception
 '''
