@@ -5,8 +5,8 @@ from sqlalchemy import Column, String, Integer, ForeignKey, create_engine
 from flask_sqlalchemy import SQLAlchemy
 
 # Connect the database
-database_name = "d431t0aid7jtcl"
-database_path = "postgresql://{}/{}".format('uuscpuraoezptf:c35b0ef7d513c90f965b1e3bf8d2b5151297d8ec4c7cb19407193daa63b37f86@ec2-52-5-247-46.compute-1.amazonaws.com:5432', database_name)
+database_name = "hktm"
+database_path = "postgresql://{}/{}".format('alfred.kctang@localhost:5432', database_name)
 
 db = SQLAlchemy()
 

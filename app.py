@@ -130,8 +130,8 @@ def create_app(test_config=None):
 
     # Handle PATCH requests for updating trademark info
     @app.route('/trademarks/<string:app_no>', methods=['PATCH'])
-    #@requires_auth('patch:trademark')
-    def update_trademark(app_no):
+    @requires_auth('patch:trademark')
+    def update_trademark(payload, app_no):
         req = request.get_json()
         trademark = Trademark.query.filter_by(app_no=app_no).one_or_none()
         if not trademark:
@@ -172,8 +172,8 @@ def create_app(test_config=None):
 
     # Handle PATCH requests for updating trademark specification info
     @app.route('/trademark_specs/<int:id>', methods=['PATCH'])
-    #@requires_auth('patch:trademark-spec')
-    def update_spec(id):
+    @requires_auth('patch:trademark_spec')
+    def update_spec(payload, id):
         req = request.get_json()
         spec = Spec.query.filter(Spec.id == id).one_or_none()
         if not spec:
@@ -238,7 +238,7 @@ def create_app(test_config=None):
 
     # Handle POST requests for inserting trademark specification info
     @app.route('/trademark_specs', methods=['POST'])
-    @requires_auth('post:trademark-spec')
+    @requires_auth('post:trademark_spec')
     def add_spec(payload):
         req = request.get_json()
         class_no = req.get('class_no')
@@ -286,7 +286,7 @@ def create_app(test_config=None):
 
     # Handle DELETE requests for a given trademark specification
     @app.route('/trademark_specs/<int:id>', methods=['DELETE'])
-    @requires_auth('delete:trademark-spec')
+    @requires_auth('delete:trademark_spec')
     def delete_spec(payload, id):
         spec = Spec.query.filter(Spec.id == id).one_or_none()
         if not spec:

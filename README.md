@@ -13,7 +13,11 @@ The Intellecutal Property Department of Hong Kong Government has a website for t
 9) Delete a trademak given its application number
 10) Delete a class specification given its internal index in database
 
-# Installation
+# URL
+
+This app is hosted live on Heroku. The URL is . Since there is no home page, please go to different endpoints instead.
+
+# Local Hosting
 
 ## Frontend
 
@@ -31,7 +35,7 @@ pip install -r requirements.txt
 
 This will install all of the required packages selected within the `requirements.txt` file.
 
-2. Then restore a database using the hktm.psql file given. With Postgres running, run the following in terminal:
+2. Then restore a database using the hktm.psql file given. Given the large file size of hktm.psql, it cannot be pushed onto GitHub, so please download the file from [here](https://drive.google.com/file/d/1M7eNR31HM6Ps9qx6IdOBPfisEwRXPeK0/view?usp=sharing) . With Postgres running, run the following in terminal:
 
 ```bash
 psql hktm < hktm.psql
@@ -53,7 +57,7 @@ Setting the `FLASK_ENV` variable to `development` will detect file changes and r
 
 ## Introduction
 * Base URL: This app can only be run locally and is not hosted as a base URL. The backend app is hosted at the default, `localhost:5000` or `127.0.0.1:5000`, which is set as a proxy in the frontend configuration. The frondend is hosted at the port `3000`.
-* Authentication: This version of the application requires authentication or API keys.
+* Authentication: This version of the application requires authentication with JWT Token.
 
 ## Error Handling
 
@@ -76,18 +80,20 @@ The API will return four error types when requests fail:
 
 ## Endpoints
 
-* [GET /trademarks](#get-/trademarks)
-* [GET /trademarks/app_no](#get-/trademarks/<app_no>)
-* [POST /trademarks/search](#post-/trademarks/search)
-* [POST /trademark_specs/search](#post-/trademark_specs/search)
-* [PATCH /trademarks/app_no](#patch-/trademarks/<app_no>)
-* [PATCH /trademark_specs/id](#patch-/trademark_specs/id)
-* [POST /trademarks](#post-/trademarks)
-* [POST /trademark_specs](#post-/trademark_specs)
-* [DELETE /trademarks/app_no](#delete-/trademarks/<app_no>)
-* [DELETE /trademark_specs/id](#delete-/trademark_specs/id)
+* [GET /trademarks](#get-trademarks)
+* [GET /trademarks/app_no](#get-trademarksapp_no)
+* [POST /trademarks/search](#post-trademarkssearch)
+* [POST /trademark_specs/search](#post-trademark_specssearch)
+* [PATCH /trademarks/app_no](#patch-trademarksapp_no)
+* [PATCH /trademark_specs/id](#patch-trademark_specsid)
+* [POST /trademarks](#post-trademarks)
+* [POST /trademark_specs](#post-trademark_specs)
+* [DELETE /trademarks/app_no](#delete-trademarksapp_no)
+* [DELETE /trademark_specs/id](#delete-trademark_specsid)
 
-### GET /trademarks
+The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademarks and /trademark_specs requires the role of editor. The role of admin has all the permissions for the latter 6 endpoints. The credentials and API endpoints testing informaiton has been setup in the postman_collection.json.
+
+## GET /trademarks
 
 - Fetches a list of trademarks with its unique trademark application number (app_no), trademark name (name), trademark owners (owners) and trademark application status (status), each as a JSON object
 - Request Arguments: None 
@@ -245,12 +251,23 @@ The API will return four error types when requests fail:
 - Posts a trademark specification
 - Request Arguments: class_no, class_spec, tm_app_no
 - Sample Request: `curl --header "Content-Type: application/json" --request POST --data{"class_no": 30, "class_spec": "apple", "tm_app_no": "19893299"} http://127.0.0.1/trademark_specs`
-- Response: a JSON object with the key "trademarks" that contains a list of objects of four key:value pairs - (1) app_no, (2) name, (3) owners and (4) status, as well as the keys of "added_trademark_app_no", "total_trademarks" and "success".
+- Response: a JSON object with the key "specs" that contains a list of objects of four key:value pairs - (1) class_no, (2) class_spec, (3) id and (4) tm_app_no, as well as the keys of "added_spec_class_no", "total_specs" and "success".
 - Sample Response:
 ```bash
 {
-    "created_question": "22",
-    "success": true
+    "added_spec_class_no": 30,
+    "specs": [
+        ...
+        {
+            "class_no": 38,
+            "class_spec": "telecommunications;allincludedinClass38.",
+            "id": 98,
+            "tm_app_no": "PA200000844"
+        },
+        ...
+    ]
+    "success": true,
+    "total_specs": 965654
 }
 ```
 
@@ -258,12 +275,22 @@ The API will return four error types when requests fail:
 - Deletes a trademark
 - Request Arguments: app_no
 - Sample Request: `curl DELETE http://127.0.0.1/questions/19801301`
-- Response: a JSON object with keys of success and deleted_question indicating the removed question id
+- Response: a JSON object with the key "trademarks" that contains a list of remaining objects of four key:value pairs - (1) app_no, (2) name, (3) owners and (4) status, as well as the keys of "deleted_trademark_app_no", "total_trademarks" and "success".
 - Sample Response:
 ```bash
 {
-    "deleted_question": "21",
-    "success": true
+    "deleted_trademark_app_no": "19801301",
+    "success": true,
+    "total_trademarks": 530591,
+    "trademarks": [
+        {
+            "app_no": "00000000",
+            "name": "apple",
+            "owners": "['Steve Jobs']",
+            "status": "Registerd"
+        },
+        ...
+    ]
 }
 ```
 
@@ -271,22 +298,26 @@ The API will return four error types when requests fail:
 - Deletes a trademark specification
 - Request Arguments: id
 - Sample Request: `curl DELETE http://127.0.0.1/questions/310421`
-- Response: a JSON object with keys of success and deleted_question indicating the removed question id
+- Response: a JSON object with the key "specs" that contains a list of objects of four key:value pairs - (1) class_no, (2) class_spec, (3) id and (4) tm_app_no, as well as the keys of "deleted_spec_class_no", "total_specs" and "success".
 - Sample Response:
 ```bash
 {
-    "deleted_question": "21",
-    "success": true
+    "deleted_spec_id": 310421,
+    "specs": [
+        ...
+        {
+            "class_no": 38,
+            "class_spec": "telecommunications;allincludedinClass38.",
+            "id": 98,
+            "tm_app_no": "PA200000844"
+        },
+        ...
+    ]
+    "success": true,
+    "total_specs": 965652
 }
 ```
 
 # Testing
 
-To run the unit tests, run
-
-```
-dropdb hktm_test
-createdb hktm_test
-psql hktm_test < hktm.psql
-python test.py
-```
+Please use the attached postman_collection.json file in Postman to test the API endpoints.
