@@ -1,2 +1,1 @@
-web: export FLASK_APP=app.py | flask run
-heroku ps:scale web=1
+web: gunicorn app:app
