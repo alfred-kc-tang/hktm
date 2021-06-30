@@ -13,29 +13,38 @@ The Intellecutal Property Department of Hong Kong Government has a website for t
 9) Delete a trademak given its application number
 10) Delete a class specification given its internal index in database
 
-# URL
+## Data
 
-This app is hosted live on Heroku. The URL is . Since there is no home page, please go to different endpoints instead.
+As the file size exceeds 100MB limit of GitHub, please download the data in .psql format from [here](https://drive.google.com/file/d/1M7eNR31HM6Ps9qx6IdOBPfisEwRXPeK0/view?usp=sharing).
 
-# Local Hosting
+## Local Hosting
 
-## Frontend
+### Frontend
 
 Current, this web app is built without a frondend.
 
-## Backend
+### Backend
 
-### Installing Dependencies
+#### Key Dependencies
+
+- [Flask](https://flask.palletsprojects.com/en/2.0.x/) is a lightweight backend microservices framework. Flask is required for handling requests and responses.
+- [SQLAlchemy](https://www.sqlalchemy.org/) is the Python SQL toolkit and Object Relational Mapper (ORM) for data modeling along with PostgreSQL.
+- [Flask-CORS](https://flask-cors.readthedocs.io/en/latest/) is a Flask extension for handling cross origin requests.
+- [Flask-Migrate](https://flask-migrate.readthedocs.io/en/latest/) is a Flask extension for handling SQLAlchemy database migrations for Flask applications using Alembic.
+- [Flask-Moment](https://pypi.org/project/Flask-Moment/) is a Flask extension for enhancing Jinja2 templates with formatting of dates and times using moment.js.
+- [Flask-Script](https://flask-script.readthedocs.io/en/latest/) is a Flask extension for supporting in writing extenal scripts in Flask applications.
+
+#### Installing Dependencies
 
 1. First install dependencies by navigating to the `/backend` directory and running:
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 This will install all of the required packages selected within the `requirements.txt` file.
 
-2. Then restore a database using the hktm.psql file given. Given the large file size of hktm.psql, it cannot be pushed onto GitHub, so please download the file from [here](https://drive.google.com/file/d/1M7eNR31HM6Ps9qx6IdOBPfisEwRXPeK0/view?usp=sharing) . With Postgres running, run the following in terminal:
+2. Then restore a database using the hktm.psql file downloaded. With Postgres running, run the following in terminal:
 
 ```bash
 psql hktm < hktm.psql
@@ -43,9 +52,17 @@ psql hktm < hktm.psql
 
 3. To run the server, execute:
 
+On Linux:
 ```bash
 export FLASK_APP=app.py
 export FLASK_ENV=development
+flask run
+```
+
+On Windows:
+```bash
+set FLASK_APP=app.py
+set FLASK_ENV=development
 flask run
 ```
 
@@ -53,13 +70,89 @@ Setting the `FLASK_APP` variable to `flask` directs flask to find the applicatio
 
 Setting the `FLASK_ENV` variable to `development` will detect file changes and restart the server automatically.
 
-# API Reference
+## Hosting on Heroku
 
-## Introduction
+This app is hosted live on Heroku. The URL is https://hktm.herokuapp.com. Since there is no home page, please go to different endpoints instead. Here are the steps for deploying the app on Heroku:
+
+1. modify the database path in models.py: comment out the code for connecting local database and use the code for connecting postgres database on Heroku
+```
+# Connect the local postgres database
+# database_name = "hktm"
+# database_path = "postgresql://{}/{}".format(
+    "postgres@localhost:5432", database_name)
+
+# Connect the postgres database on Heroku
+database_path = "postgresql" + os.environ['DATABASE_URL'][8:]
+```
+
+2. create Heroku app
+
+```
+heroku create <app_name>
+```
+
+3. add git remote for Heroku to local repository
+
+```
+git remote add  heroku <heroku_git_url>
+```
+
+4. add postgresql add on for our database
+
+```
+heroku addons:create heroku-postgresql:hobby-dev --app <app_name>
+```
+
+5. check configuration variables in Heroku
+
+```
+heroku config --app <app_name>
+```
+
+6. push the code on Heroku
+
+```
+git push heroku master
+```
+
+7. run database migration script
+```
+heroku run python manage.py db upgrade --app <app_name>
+```
+
+You will then have the live application on Heroku!
+
+## Third-Party Authentication
+
+Auth0 is set up and running. The configurations are set in setup.sh file which exports the following:
+1. Auth0 domain name
+2. The JWT code signing secret
+3. Auth0 client ID
+
+## API Reference
+
+### Introduction
 * Base URL: This app can only be run locally and is not hosted as a base URL. The backend app is hosted at the default, `localhost:5000` or `127.0.0.1:5000`, which is set as a proxy in the frontend configuration. The frondend is hosted at the port `3000`.
-* Authentication: This version of the application requires authentication with JWT Token.
+* Authentication: This version of the application requires authentication with the appropriate JWT Token.
 
-## Error Handling
+### Roles and Permissions
+
+|    Roles    |                       Permissions                         |
+| ----------- | --------------------------------------------------------- |
+| Public User |             [GET /trademarks](#get-trademarks)            |
+|             |      [GET /trademarks/app_no](#get-trademarksapp_no)      |
+|             |     [POST /trademarks/search](#post-trademarkssearch)     |
+|             |[POST /trademark_specs/search](#post-trademark_specssearch)|
+| ----------- | --------------------------------------------------------- |
+|    Editor   |    [PATCH /trademarks/app_no](#patch-trademarksapp_no)    |
+|             |   [PATCH /trademark_specs/id](#patch-trademark_specsid)   |
+| ----------- | --------------------------------------------------------- |
+|    Admin    |            [POST /trademarks](#post-trademarks)           |
+|             |       [POST /trademark_specs](#post-trademark_specs)      |
+|             |   [DELETE /trademarks/app_no](#delete-trademarksapp_no)   |
+|             |  [DELETE /trademark_specs/id](#delete-trademark_specsid)  |
+
+### Error Handling
 
 Errors are returned as JSON objects in the following format
 
@@ -78,7 +171,7 @@ The API will return four error types when requests fail:
 * 422: Not Processable
 * 500: Internal Server Error
 
-## Endpoints
+### Endpoints
 
 * [GET /trademarks](#get-trademarks)
 * [GET /trademarks/app_no](#get-trademarksapp_no)
@@ -93,7 +186,7 @@ The API will return four error types when requests fail:
 
 The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademarks and /trademark_specs requires the role of editor. The role of admin has all the permissions for the latter 6 endpoints. The credentials and API endpoints testing informaiton has been setup in the postman_collection.json.
 
-## GET /trademarks
+#### GET /trademarks
 
 - Fetches a list of trademarks with its unique trademark application number (app_no), trademark name (name), trademark owners (owners) and trademark application status (status), each as a JSON object
 - Request Arguments: None 
@@ -117,7 +210,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## GET /trademarks/app_no
+#### GET /trademarks/app_no
 - Fetches the details of a trademark containing its unique trademark application number (app_no), trademark name (name), trademark owners (owners) and trademark application status (status), trademark applicant (applicant), trademark application type (type), trademarks class(es), trademark application id (id) and the associated specifications (class_numbers_and_specifications), as well as the "success" key.
 - Request Arguments: None
 - Sample Request: `curl http://127.0.0.1/trademarks/19914141`
@@ -139,7 +232,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## POST /trademarks/search
+#### POST /trademarks/search
 - Searches trademarks whose names contain the search term
 - Request Argument: search term
 - Sample Request: `curl --header "Content-Type: application/json" --request POST --data{"searchTerm": "apple"} http://127.0.0.1/trademarks/search`
@@ -162,7 +255,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## POST /trademark_specs/search
+#### POST /trademark_specs/search
 - Searches trademark specifications that contains the search term
 - Request Argument: search term
 - Sample Request: `curl --header "Content-Type: application/json" --request POST --data{"searchTerm": "apple"} http://127.0.0.1/trademark_specs/search`
@@ -185,7 +278,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## PATCH /trademarks/app_no
+#### PATCH /trademarks/app_no
 - Modified the record of a given trademark, the fields that can be updated are: name, status, owners, applicant, type, and id
 - Request Argument: trademark application number
 - Sample Request: `curl --header "Content-Type: application/json" --request PATCH --data{"name": "apple", "status": "Expired"} http://127.0.0.1/trademarks/19831491`
@@ -206,7 +299,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## PATCH /trademark_specs/id
+#### PATCH /trademark_specs/id
 - Modified the record of a given trademark specification, the fields that can be updated are: trademark class number (class_no), trademark class specification (class_spec), its associated trademark application number (tm_app_no)
 - Request Argument: trademark specification id in the database
 - Sample Request: `curl --header "Content-Type: application/json" --request PATCH --data{"class_no": 30, "class_spec": "apple"} http://127.0.0.1/trademarks/915609`
@@ -224,7 +317,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## POST /trademarks
+#### POST /trademarks
 - Posts a trademark
 - Request Arguments: app_no, name, status and owners; applicant, type and trademark_id are optional
 - Sample Request: `curl --header "Content-Type: application/json" --request POST --data{"app_no": "00000000", "name": "apple", "status": "Registered", "owners": "['Steve Jobs']", "trademark_id": "1234_00000000"} http://127.0.0.1/trademarks`
@@ -247,7 +340,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## POST /trademark_specs
+#### POST /trademark_specs
 - Posts a trademark specification
 - Request Arguments: class_no, class_spec, tm_app_no
 - Sample Request: `curl --header "Content-Type: application/json" --request POST --data{"class_no": 30, "class_spec": "apple", "tm_app_no": "19893299"} http://127.0.0.1/trademark_specs`
@@ -271,7 +364,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## DELETE /trademarks/app_no
+#### DELETE /trademarks/app_no
 - Deletes a trademark
 - Request Arguments: app_no
 - Sample Request: `curl DELETE http://127.0.0.1/questions/19801301`
@@ -294,7 +387,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-## DELETE /trademark_spec/id
+#### DELETE /trademark_spec/id
 - Deletes a trademark specification
 - Request Arguments: id
 - Sample Request: `curl DELETE http://127.0.0.1/questions/310421`
@@ -318,6 +411,15 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 }
 ```
 
-# Testing
+## Testing
 
-Please use the attached postman_collection.json file in Postman to test the API endpoints.
+There are 22 unit tests in test.py. To test the API endpoints, please run the following:
+
+```
+dropdb hktm_test
+createdb hktm_test
+psql hktm_test < hktm.psql
+python test.py
+```
+
+The tests include at least one test for expected success and error behavior for each endpoint using the unittest library. Moreover, the tests demonstrate role-based access control, attached with the JWT Tokens of (1) Editor and (2) Admin. Editor is permitted to access patch endpoints on trademarks and trademark specifications, so the JWT Token of Editor is given when testing the two endpoints; Admin is permitted to access post and delete endpoints on trademarks and trademark specifications, so the JWT Token of Admin is given when testing the four endpoints.

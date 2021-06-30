@@ -1,7 +1,15 @@
 import os
 import json
+import sys
 
-from flask import Flask, request, abort, jsonify, flash, render_template
+from flask import (
+    Flask,
+    request,
+    abort,
+    jsonify,
+    flash,
+    render_template
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -10,15 +18,17 @@ from flask_moment import Moment
 from models import setup_db, Trademark, Spec
 from auth import AuthError, requires_auth
 
-'''
+"""
 App Config
-'''
-# Create and configure the app
+"""
+
+
 def create_app(test_config=None):
+    """Create and configure the app."""
     app = Flask(__name__)
     moment = Moment(app)
     db = setup_db(app)
-    #migrate = Migrate(app, db)
+    migrate = Migrate(app, db)
 
     # Set up CORS that allows any origins for the api resources
     cors = CORS(app, resources={r"/api/*": {"origin": "*"}})
@@ -28,8 +38,10 @@ def create_app(test_config=None):
     '''
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,true')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PATCH,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers',
+                             'Content-Type,Authorization,true')
+        response.headers.add('Access-Control-Allow-Methods',
+                             'GET,PATCH,POST,DELETE,OPTIONS')
         return response
 
     '''
@@ -48,9 +60,22 @@ def create_app(test_config=None):
     '''
     Controllers
     '''
-    # Handle GET requests for all available trademarks
     @app.route('/trademarks', methods=['GET'])
     def get_trademarks():
+        """Handle GET requests for all available trademarks.
+        ---
+        get:
+            description: Get paginated trademarks info and its total number.
+            responses:
+                200:
+                    description: a list of paginaged trademarks and the total
+                        number of trademarks in the database.
+                    trademarks: a list of trademarks objects with app_no, name,
+                        status and owners.
+                    total_trademarks: total number of trademarks.
+                404:
+                    description: trademarks not found.
+        """
         try:
             trademarks = Trademark.query.order_by(Trademark.app_no).all()
             current_trademarks = paginate_results(request, trademarks)
@@ -62,12 +87,24 @@ def create_app(test_config=None):
                 'trademarks': current_trademarks,
                 'total_trademarks': len(trademarks)
             }), 200
-        except:
+        except Exception:
             abort(404)
+            print(sys.exc_info())
 
-    # Handle GET requests for trademark details given application number
     @app.route('/trademarks/<string:app_no>', methods=['GET'])
     def get_trademark_class_details(app_no):
+        """Handle Get requests for trademark details given application number.
+        ---
+        get:
+            description: Get a trademark given its application number.
+            responses:
+                200:
+                    description: a trademark object to be returned.
+                    trademark: a trademark object with more detailed info in
+                        long format.
+                404:
+                    description: trademark not found.
+        """
         try:
             trademark = Trademark.query.get(app_no)
             return jsonify({
@@ -83,12 +120,32 @@ def create_app(test_config=None):
                     spec.class_no: spec.class_spec for spec in trademark.specs
                 }
             }), 200
-        except:
+        except Exception:
             abort(404)
+            print(sys.exc_info())
 
-    # Handle search on trademarks using POST endpoint
     @app.route('/trademarks/search', methods=['POST'])
     def search_trademarks():
+        """Handle search on trademarks using POST endpoint.
+        ---
+        post:
+            description: Search trademarks whose names contain the search term.
+            parameters:
+                - name: searchTerm
+                  type: string
+                  required: true
+            responses:
+                200:
+                    description: a list of paginated trademarks whose names
+                        contain the search term, i.e. relevant trademarks.
+                    trademarks: a list of trademarks objects with app_no, name,
+                        status and owners.
+                    total_trademarks: total number of the relevant trademarks.
+                404:
+                    description: relevant trademarks not found.
+                422:
+                    description: search term is None or empty.
+        """
         req = request.get_json()
         search_term = req.get('searchTerm')
         if search_term is None or search_term == '':
@@ -96,19 +153,42 @@ def create_app(test_config=None):
 
         # Case-insensitive search term
         try:
-            results = Trademark.query.filter(Trademark.name.ilike("%" + search_term + "%")).all()
+            results = Trademark.query.filter(Trademark.name.ilike(
+                "%" + search_term + "%")).all()
             current_results = paginate_results(request, results)
             return jsonify({
                 'success': True,
                 'trademarks': current_results,
                 'total_trademarks': len(results)
             }), 200
-        except:
+        except Exception:
             abort(404)
+            print(sys.exc_info())
 
-    # Handle search on trademark specifications using POST endpoint
     @app.route('/trademark_specs/search', methods=['POST'])
     def search_trademark_specs():
+        """Handle search on trademark specifications using POST endpoint.
+        ---
+        post:
+            description: Search trademarks whose names contain the search term.
+            parameters:
+                - name: searchTerm
+                  type: string
+                  required: true
+            responses:
+                200:
+                    description: a list of paginated trademarks specifcations
+                        that contain the search term, i.e. relevant
+                        specifications.
+                    specs: a list of specification objects with id, class_no,
+                        class_spec, and tm_app_no.
+                    total_specs: total number of the relevant
+                        specifications.
+                404:
+                    description: relevant specifications not found.
+                422:
+                    description: search term is None or empty.
+        """
         req = request.get_json()
         search_term = req.get('searchTerm')
         if search_term is None or search_term == '':
@@ -116,27 +196,46 @@ def create_app(test_config=None):
 
         # Case-insensitive search term
         try:
-            results = Spec.query.filter(Spec.class_spec.ilike("%" + search_term + "%")).all()
-            if len(results) == 0:
-                abort(404)
+            results = Spec.query.filter(Spec.class_spec.ilike(
+                "%" + search_term + "%")).all()
             current_results = paginate_results(request, results)
             return jsonify({
                 'success': True,
-                'class_numbers_and_specifications': current_results,
-                'total_specifications': len(results)
+                'specs': current_results,
+                'total_specs': len(results)
             }), 200
-        except:
-            abort(500)
+        except Exception:
+            abort(404)
+            print(sys.exc_info())
 
-    # Handle PATCH requests for updating trademark info
     @app.route('/trademarks/<string:app_no>', methods=['PATCH'])
     @requires_auth('patch:trademark')
     def update_trademark(payload, app_no):
+        """Handle PATCH requests for updating trademark info.
+        ---
+        patch:
+            description: Update trademark specific info.
+            security:
+                - payload: decoded payload.
+            parameters:
+                - name: app_no
+                  type: string
+                  required: true
+            responses:
+                200:
+                    description: updated trademark object to be returned.
+                    updated_trademark: trademark object with more detailed info
+                        in long format.
+                404:
+                    description: trademark not found.
+                422:
+                    description: update cannot be processed.
+        """
         req = request.get_json()
         trademark = Trademark.query.filter_by(app_no=app_no).one_or_none()
         if not trademark:
             abort(404)
-        
+
         try:
             updated_name = req.get('name')
             updated_status = req.get('status')
@@ -144,7 +243,7 @@ def create_app(test_config=None):
             updated_applicant = req.get('applicant')
             updated_type = req.get('type')
             updated_id = req.get('trademark_id')
-            updated_items = [updated_name, updated_status, updated_owners, 
+            updated_items = [updated_name, updated_status, updated_owners,
                              updated_applicant, updated_type, updated_id]
             if all(i is None for i in updated_items):
                 abort(422)
@@ -167,23 +266,45 @@ def create_app(test_config=None):
                 'success': True,
                 'updated_trademark': trademark.long()
             }), 200
-        except:
+        except Exception:
             abort(422)
+            print(sys.exc_info())
 
-    # Handle PATCH requests for updating trademark specification info
     @app.route('/trademark_specs/<int:id>', methods=['PATCH'])
     @requires_auth('patch:trademark_spec')
     def update_spec(payload, id):
+        """Handle PATCH requests for updating trademark specification info.
+        ---
+        patch:
+            description: Update specification info.
+            security:
+                - payload: decoded payload.
+            parameters:
+                - name: id
+                  type: integer
+                  required: true
+            responses:
+                200:
+                    description: an updated specification object to be
+                        returned.
+                    updated_spec: a specifcation object with id, class_no,
+                        class_spec, and tm_app_no.
+                404:
+                    description: specification not found.
+                422:
+                    description: update cannot be processed.
+        """
         req = request.get_json()
         spec = Spec.query.filter(Spec.id == id).one_or_none()
         if not spec:
             abort(404)
-        
+
         try:
             updated_class_no = req.get('class_no')
             updated_class_spec = req.get('class_spec')
             updated_tm_app_no = req.get('tm_app_no')
-            updated_items = [updated_class_spec, updated_class_spec, updated_tm_app_no]
+            updated_items = [updated_class_spec, updated_class_spec,
+                             updated_tm_app_no]
             if all(i is None for i in updated_items):
                 abort(422)
 
@@ -198,32 +319,71 @@ def create_app(test_config=None):
                 'success': True,
                 'updated_spec': spec.format()
             }), 200
-        except:
+        except Exception:
             abort(422)
+            print(sys.exc_info())
 
-    # Handle POST requests for inserting trademark info
     @app.route('/trademarks', methods=['POST'])
     @requires_auth('post:trademark')
     def add_trademark(payload):
+        """Handle POST requests for inserting a trademark record.
+        ---
+        post:
+            description: Insert a trademark record.
+            security:
+                - payload: decoded payload.
+            parameters:
+                - name: app_no
+                  type: string
+                  required: true
+                - name: name
+                  type: string
+                  required: true
+                - name: status
+                  type: string
+                  required: true
+                - name: owners
+                  type: string
+                  required: true
+                - name: applicant
+                  type: string
+                  required: false
+                - name: type
+                  type: string
+                  required: false
+                - name: trademark_id
+                  type: string
+                  required: false
+            responses:
+                200:
+                    description: inserted a trademark record.
+                    added_trademark_app_no: the inserted trademark application
+                        number.
+                    trademarks: a list of trademarks objects with app_no, name,
+                        status and owners.
+                    total_trademarks: total number of trademarks.
+                422:
+                    description: insertion cannot be processed.
+        """
         req = request.get_json()
         app_no = req.get('app_no')
         name = req.get('name')
         status = req.get('status')
         owners = req.get('owners')
         applicant = req.get('applicant')
-        type = req.get('type')
+        tm_type = req.get('type')
         trademark_id = req.get('trademark_id')
         if app_no is None or name is None or status is None or owners is None:
             abort(422)
-        
+
         try:
-            trademark = Trademark(app_no=app_no, 
-                                name=name, 
-                                status=status, 
-                                owners=owners, 
-                                applicant=applicant,
-                                type=type,
-                                trademark_id=trademark_id)
+            trademark = Trademark(app_no=app_no,
+                                  name=name,
+                                  status=status,
+                                  owners=owners,
+                                  applicant=applicant,
+                                  type=tm_type,
+                                  trademark_id=trademark_id)
             trademark.insert()
             trademarks = Trademark.query.order_by(Trademark.app_no).all()
             current_trademarks = paginate_results(request, trademarks)
@@ -233,20 +393,49 @@ def create_app(test_config=None):
                 'trademarks': current_trademarks,
                 'total_trademarks': len(trademarks)
             }), 200
-        except:
+        except Exception:
             abort(422)
+            print(sys.exc_info())
 
-    # Handle POST requests for inserting trademark specification info
     @app.route('/trademark_specs', methods=['POST'])
     @requires_auth('post:trademark_spec')
     def add_spec(payload):
+        """Handle POST requests for inserting trademark specification record.
+        ---
+        patch:
+            description: Insert a specification record.
+            security:
+                - payload: decoded payload.
+            parameters:
+                - name: class_no
+                  type: integer
+                  required: true
+                - name: class_spec
+                  type: string
+                  required: true
+                - name: tm_app_no
+                  type: string
+                  required: true
+            responses:
+                200:
+                    description: inserted a trademark specification record.
+                    added_spec_class_no: the inserted trademark specification
+                        class number.
+                    specs: a list of specification objects with id, class_no,
+                        class_spec, and tm_app_no.
+                    updated_spec: a specifcation object with id, class_no,
+                        class_spec, and tm_app_no.
+                    total_specs: total number of the specifications.
+                422:
+                    description: insertion cannot be processed.
+        """
         req = request.get_json()
         class_no = req.get('class_no')
         class_spec = req.get('class_spec')
         tm_app_no = req.get('tm_app_no')
         if class_no is None or class_spec is None or tm_app_no is None:
             abort(422)
-        
+
         try:
             spec = Spec(class_no=class_no,
                         class_spec=class_spec,
@@ -260,13 +449,37 @@ def create_app(test_config=None):
                 'specs': current_specs,
                 'total_specs': len(specs)
             }), 200
-        except:
+        except Exception:
             abort(422)
+            print(sys.exc_info())
 
     # Handle DELETE requests for a given trademark
     @app.route('/trademarks/<string:app_no>', methods=['DELETE'])
     @requires_auth('delete:trademark')
     def delete_trademark(payload, app_no):
+        """Handle DELETE requests for deleting a trademark record.
+        ---
+        delete:
+            description: Delete a trademark record.
+            security:
+                - payload: decoded payload.
+            parameters:
+                - name: app_no
+                  type: string
+                  required: true
+            responses:
+                200:
+                    description: deleted a trademark record.
+                    deleted_trademark_app_no: the application number of the
+                        deleted trademark.
+                    trademarks: a list of trademarks objects with app_no, name,
+                        status and owners.
+                    total_trademarks: total number of the relevant trademarks.
+                404:
+                    description: trademark not found.
+                422:
+                    description: deletion cannot be processed.
+        """
         trademark = Trademark.query.filter_by(app_no=app_no).one_or_none()
         if not trademark:
             abort(404)
@@ -281,13 +494,35 @@ def create_app(test_config=None):
                 'trademarks': current_trademarks,
                 'total_trademarks': len(trademarks)
             }), 200
-        except:
+        except Exception:
             abort(422)
+            print(sys.exc_info())
 
-    # Handle DELETE requests for a given trademark specification
     @app.route('/trademark_specs/<int:id>', methods=['DELETE'])
     @requires_auth('delete:trademark_spec')
     def delete_spec(payload, id):
+        """Handle POST requests for deleting a trademark specification record.
+        ---
+        patch:
+            description: Delete a specification record.
+            security:
+                - payload: decoded payload.
+            parameters:
+                - name: id
+                  type: integer
+                  required: true
+            responses:
+                200:
+                    description: deleted a trademark specification record.
+                    deleted_spec_id: the deleted trademark specification id.
+                    specs: a list of specification objects with id, class_no,
+                        class_spec, and tm_app_no.
+                    total_specs: total number of the specifications.
+                404:
+                    description: specification not found.
+                422:
+                    description: update cannot be processed.
+        """
         spec = Spec.query.filter(Spec.id == id).one_or_none()
         if not spec:
             abort(404)
@@ -302,8 +537,9 @@ def create_app(test_config=None):
                 'specs': current_specs,
                 'total_specs': len(specs)
             }), 200
-        except:
+        except Exception:
             abort(422)
+            print(sys.exc_info())
 
     '''
     Error Handlers
@@ -349,6 +585,7 @@ def create_app(test_config=None):
         }), 500
 
     return app
+
 
 # Initialize flask app
 app = create_app()
