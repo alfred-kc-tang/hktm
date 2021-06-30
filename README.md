@@ -17,6 +17,14 @@ The Intellecutal Property Department of Hong Kong Government has a website for t
 
 As the file size exceeds 100MB limit of GitHub, please download the data in .psql format from [here](https://drive.google.com/file/d/1M7eNR31HM6Ps9qx6IdOBPfisEwRXPeK0/view?usp=sharing).
 
+## Tokens
+
+The credentials are stored in the setup.sh file. Please run the following to save the credentials as environment variables:
+
+```bash
+source setup.sh
+```
+
 ## Local Hosting
 
 ### Frontend
@@ -36,7 +44,7 @@ Current, this web app is built without a frondend.
 
 #### Installing Dependencies
 
-1. First install dependencies by navigating to the `/backend` directory and running:
+1. install dependencies by navigating to the `/backend` directory and running:
 
 ```bash
 pip3 install -r requirements.txt
@@ -44,13 +52,19 @@ pip3 install -r requirements.txt
 
 This will install all of the required packages selected within the `requirements.txt` file.
 
-2. Then restore a database using the hktm.psql file downloaded. With Postgres running, run the following in terminal:
+2. restore a database using the hktm.psql file downloaded. With Postgres running, run the following in terminal:
 
 ```bash
 psql hktm < hktm.psql
 ```
 
-3. To run the server, execute:
+3. save the credentials as environment variables:
+
+```bash
+source setup.sh
+```
+
+4. To run the server, execute:
 
 On Linux:
 ```bash
@@ -75,7 +89,8 @@ Setting the `FLASK_ENV` variable to `development` will detect file changes and r
 This app is hosted live on Heroku. The URL is https://hktm.herokuapp.com. Since there is no home page, please go to different endpoints instead. Here are the steps for deploying the app on Heroku:
 
 1. modify the database path in models.py: comment out the code for connecting local database and use the code for connecting postgres database on Heroku
-```
+
+```bash
 # Connect the local postgres database
 # database_name = "hktm"
 # database_path = "postgresql://{}/{}".format(
@@ -87,36 +102,37 @@ database_path = "postgresql" + os.environ['DATABASE_URL'][8:]
 
 2. create Heroku app
 
-```
+```bash
 heroku create <app_name>
 ```
 
 3. add git remote for Heroku to local repository
 
-```
+```bash
 git remote add  heroku <heroku_git_url>
 ```
 
 4. add postgresql add on for our database
 
-```
+```bash
 heroku addons:create heroku-postgresql:hobby-dev --app <app_name>
 ```
 
 5. check configuration variables in Heroku
 
-```
+```bash
 heroku config --app <app_name>
 ```
 
 6. push the code on Heroku
 
-```
+```bash
 git push heroku master
 ```
 
 7. run database migration script
-```
+
+```bash
 heroku run python manage.py db upgrade --app <app_name>
 ```
 
@@ -143,10 +159,8 @@ Auth0 is set up and running. The configurations are set in setup.sh file which e
 |             |      [GET /trademarks/app_no](#get-trademarksapp_no)      |
 |             |     [POST /trademarks/search](#post-trademarkssearch)     |
 |             |[POST /trademark_specs/search](#post-trademark_specssearch)|
-| ----------- | --------------------------------------------------------- |
 |    Editor   |    [PATCH /trademarks/app_no](#patch-trademarksapp_no)    |
 |             |   [PATCH /trademark_specs/id](#patch-trademark_specsid)   |
-| ----------- | --------------------------------------------------------- |
 |    Admin    |            [POST /trademarks](#post-trademarks)           |
 |             |       [POST /trademark_specs](#post-trademark_specs)      |
 |             |   [DELETE /trademarks/app_no](#delete-trademarksapp_no)   |
@@ -415,7 +429,7 @@ The first 4 endpoints are publicly accessible. The PATCH endpoints on /trademark
 
 There are 22 unit tests in test.py. To test the API endpoints, please run the following:
 
-```
+```bash
 dropdb hktm_test
 createdb hktm_test
 psql hktm_test < hktm.psql
