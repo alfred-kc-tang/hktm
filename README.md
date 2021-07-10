@@ -15,7 +15,7 @@ The Intellecutal Property Department of Hong Kong Government has a website for t
 
 ## Data
 
-As the file size exceeds 100MB limit of GitHub, please download the data in .psql format from [here](https://drive.google.com/file/d/1M7eNR31HM6Ps9qx6IdOBPfisEwRXPeK0/view?usp=sharing).
+As the file size exceeds 100MB limit of GitHub, the data is not available here.
 
 ## Tokens
 
